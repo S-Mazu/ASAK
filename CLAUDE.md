@@ -34,8 +34,12 @@ any finding.
 
 - **Run it and report its actual output.**
 - **Zero findings is the target.** Warnings count — list every one.
-- **Suppress a rule only in `PSScriptAnalyzerSettings.psd1`**, never with an
-  inline `SuppressMessage` attribute.
+- **Fix the finding.** If it can't be fixed, report it with a suggested
+  suppression — don't apply one unasked.
+- **Scope a suppression as narrowly as the false positive actually is** — a
+  path-scoped exclusion in `tools/verify.ps1` if it's local to one folder, a
+  rule-wide entry in `PSScriptAnalyzerSettings.psd1` only if it's a false
+  positive everywhere. Never an inline `SuppressMessage` attribute.
 - **If a required module is missing, report it.**
 - **Every function ships with Pester tests.** Mock the external call — winget,
   registry, filesystem.
