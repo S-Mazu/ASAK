@@ -45,6 +45,28 @@ PowerShell 7 tooling for machine management and information gathering on Windows
 | FF#3 | Get-AppxPackage integration | Add AppX/UWP packages as a fifth source for `Get-InstalledApp`. | Medium | S |
 | FF#7 | Outdated version check | Compare each inventoried app's installed version against its latest available version, flag outdated ones. | Medium | M |
 | FF#11 | Independent export collection | Exporting Apps/Features currently requires running Show first (which also pages the result onscreen) since Export reads `$LastAppResult`/`$LastFeatureResult`. Give Export its own source selection and collection step, independent of Show, so exporting doesn't force an unwanted onscreen display first. | Medium | S |
+| FF#12 | Show Windows license key | Retrieve and display the Windows product/license key. | Low | S |
+| FF#13 | Get Autopilot hardware hash | Retrieve the hardware hash/ID needed for Windows Autopilot device registration. | Medium | S |
+| FF#14 | Comparable inventory output | Add comparison capability to inventory results where sensible (e.g. diff two exports, or cross-check sources against each other). | Medium | M |
+| FF#15 | Uninstall packages | Add uninstall capability for installed apps/packages. State-changing — needs `ShouldProcess` per the Execution Boundary. | Medium | M |
+| FF#16 | Install via winget | Install applications via winget from the menu. State-changing — needs `ShouldProcess`. | Medium | M |
+| FF#17 | Install common PowerShell modules | Menu shortcut to install frequently-used modules (e.g. ExchangeOnlineManagement, PnP.PowerShell, Microsoft.Graph/Entra). State-changing — needs `ShouldProcess`. | Medium | M |
+| FF#18 | Recent System/Security event log errors | Show the last 10 Error/Critical entries from the System and Security event logs. | Medium | S |
+| FF#19 | Get Intune enrollment status | Show the device's Intune management/enrollment status. | Medium | S |
+| FF#20 | Local admin group members | List local users who are members of the local Administrators group. | Medium | S |
+| FF#21 | Detect duplicate app installs | Flag apps with multiple installed versions present at once (e.g. two versions of the same app) in the inventory output. | Medium | S |
+| FF#22 | Windows version check | Compare the installed Windows version/build against the most recent available version, flag if outdated. | Medium | S |
+| FF#23 | SCCM vs Intune management status | Show which management is configured (SCCM, Intune, or co-management). | Medium | S |
+| FF#24 | AD join status | Show Active Directory domain join status (domain-joined, Azure AD/Entra joined, or workgroup). | Medium | S |
+| FF#25 | TPM status and version | Show TPM presence, status, and version. | Medium | S |
+| FF#26 | Clear Teams cache | Clear Microsoft Teams cache. State-changing — needs `ShouldProcess`. | Low | S |
+| FF#27 | Clear temp files | Clear temporary files. State-changing — needs `ShouldProcess`. | Low | S |
+| FF#28 | Remove old Windows version | Remove `Windows.old` after an OS upgrade. State-changing — needs `ShouldProcess`. | Low | S |
+| FF#29 | Delete Edge cache | Clear Microsoft Edge browser cache. State-changing — needs `ShouldProcess`. | Low | S |
+| FF#30 | Reset Edge | Reset Microsoft Edge to its default state. State-changing — needs `ShouldProcess`. | Low | M |
+| FF#31 | DISM and SFC troubleshooting | Run DISM `/RestoreHealth` and SFC `/scannow` for system file repair. State-changing — needs `ShouldProcess`. | Medium | M |
+| FF#32 | Join domain | Join the computer to an Active Directory domain. State-changing — needs `ShouldProcess`. | Medium | M |
+| FF#33 | Network stats | Show IP configuration, gateway, and DNS servers. | Medium | S |
 
 ---
 
