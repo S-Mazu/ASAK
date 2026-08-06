@@ -103,4 +103,9 @@ for approval.
 
 ### Phase B — user approval and apply
 
-The user approval is needed to apply changes from Phase A. After applying do a verification: look for duplicates, check touched items against Documentation Style rules. Report findings.
+The user approval is needed to apply changes from Phase A. After applying,
+verify: look for duplicates, check touched items against Documentation Style
+rules. Report findings.
+
+- **No findings:** commit and push.
+- **Findings:** wait for the user to clear them before committing.
