@@ -1,0 +1,18 @@
+│ FF#34 │ Detect third-party endpoint    │ Check for Baramundi, Matrix42, Ivanti, ManageEngine, NinjaOne, OPSI    │
+│       │ management agents              │ agents via service/registry presence.                                  │
+├───────┼────────────────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ FF#35 │ BitLocker encryption status    │ Show encryption status per volume.                                     │
+├───────┼────────────────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ FF#36 │ Windows Defender / AV status   │ Show real-time protection status and definitions age.                  │
+├───────┼────────────────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ FF#37 │ Secure Boot status             │ Show whether Secure Boot is enabled.                                   │
+├───────┼────────────────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ FF#38 │ Pending reboot / Windows       │ Show outstanding updates, last update, reboot-pending flag.            │
+│       │ Update status                  │                                                                        │
+├───────┼────────────────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ FF#39 │ BIOS/UEFI version and          │ Show firmware version, serial number, asset tag.                       │
+│       │ serial/asset tag               │                                                                        │
+├───────┼────────────────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ FF#40 │ Uptime / last boot time        │ Show system uptime and last boot time.                                 │
+├───────┼────────────────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ FF#41 │ Windows Firewall status        │ Show on/off status per profile (Domain/Private/Public).
