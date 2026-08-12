@@ -40,25 +40,6 @@ Describe 'Get-InstalledApp' {
         }
     }
 
-    Context 'Package source' {
-        BeforeAll {
-            # Get-Package's provider-injected dynamic parameters break Pester's mock-proxy
-            # generation. Stub it first so Mock builds the proxy from the plain stub instead.
-            function Get-Package { }
-            Mock Get-Package {
-                [PSCustomObject]@{
-                    Name         = 'Pkg App'
-                    Version      = '3.0.0'
-                    ProviderName = 'Programs'
-                }
-            }
-        }
-        It 'returns apps tagged with Source Package' {
-            $Result = Get-InstalledApp -Source Package
-            $Result.Source | Should -Contain 'Package'
-        }
-    }
-
     Context 'Winget source' {
         BeforeAll {
             Mock winget {
@@ -76,19 +57,35 @@ Describe 'Get-InstalledApp' {
         }
     }
 
+    Context 'Appx source' {
+        BeforeAll {
+            Mock Get-AppxPackage {
+                [PSCustomObject]@{
+                    Name      = 'Appx App'
+                    Version   = '5.0.0'
+                    Publisher = 'CN=Appx Publisher'
+                }
+            }
+        }
+        It 'returns apps tagged with Source Appx' {
+            $Result = Get-InstalledApp -Source Appx
+            $Result.Source | Should -Contain 'Appx'
+            $Result[0].Name | Should -Be 'Appx App'
+        }
+    }
+
     Context 'multiple sources' {
         BeforeAll {
             Mock Get-ItemProperty {
                 [PSCustomObject]@{ DisplayName = 'Reg App'; DisplayVersion = '1.0'; Publisher = 'Pub' }
             }
-            function Get-Package { }
-            Mock Get-Package {
-                [PSCustomObject]@{ Name = 'Pkg App'; Version = '2.0'; ProviderName = 'Programs' }
+            Mock Get-AppxPackage {
+                [PSCustomObject]@{ Name = 'Appx App'; Version = '2.0'; Publisher = 'CN=Pub' }
             }
         }
         It 'runs every requested source and tags each row' {
-            $Result = Get-InstalledApp -Source @('Registry', 'Package')
-            ($Result.Source | Sort-Object -Unique) | Should -Be @('Package', 'Registry')
+            $Result = Get-InstalledApp -Source @('Registry', 'Appx')
+            ($Result.Source | Sort-Object -Unique) | Should -Be @('Appx', 'Registry')
         }
     }
 }

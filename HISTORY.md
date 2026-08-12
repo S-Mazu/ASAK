@@ -16,3 +16,12 @@
 - **FF#8 — Two-level menu restructure**: top menu is `App Management` / `Version Info`; App Management is a flat submenu (Show/Export × Apps/Features); export tracks `$LastAppResult`/`$LastFeatureResult` separately.
 - **FF#9 — Version Info menu item**: shows `$AsakVersion`, a short static usage summary, and points to `HISTORY.md` for release notes.
 - **FF#10 — Default export path**: empty path prompt defaults to `.\<function name>.csv`.
+
+## 2026-08-07
+
+- **M3 — Sorting out Inventory**: shipped and live-tested; several bugs found and fixed during live-test (folded in below).
+- **FF#3 — Get-AppxPackage integration**: `Appx` added as a fifth source to `Get-InstalledApp`.
+- **FF#11 — Independent export collection**: Export now collects its own data via `Get-AppInventory`/`Get-FeatureInventory`/`Get-ModuleInventory`, no longer depends on `$Last*Result` from Show.
+- **FF#34 — PowerShell module inventory**: new `Get-InstalledPSModule` function; sources `Module` (tagged by the literal `PSModulePath` segment it was found under) and `Package` (moved off `Get-InstalledApp` mid-milestone after live-test review confirmed it's PowerShell-only under PS7).
+- **FF#35 — Split inventory into three top-level sections**: menu restructured to PowerShell Modules / Installed Apps / Windows Features / Version Info.
+- Live-test fixes folded into M3: unreadable Modules table (`Format-Table -Wrap`), `Q`-quit paging error (try/catch on `OperationStopped`), `Source` column moved last for Modules/Packages, friendlier Optional/ServerManager feature-query failure message, 30-second background-job timeout on feature queries (`Get-WindowsOptionalFeature`/`Get-WindowsFeature` can hang on a broken DISM COM registration).

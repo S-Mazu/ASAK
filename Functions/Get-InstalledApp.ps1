@@ -5,7 +5,7 @@ function Get-InstalledApp {
     [OutputType([PSCustomObject])]
     param(
         [Parameter(Mandatory)]
-        [ValidateSet('Registry', 'Win32_Product', 'Package', 'Winget')]
+        [ValidateSet('Registry', 'Win32_Product', 'Winget', 'Appx')]
         [string[]]$Source
     )
 
@@ -36,17 +36,6 @@ function Get-InstalledApp {
                             Name      = $_.Name
                             Version   = $_.Version
                             Publisher = $_.Vendor
-                        }
-                    }
-            }
-            'Package' {
-                Get-Package -Name '*' |
-                    ForEach-Object {
-                        [PSCustomObject]@{
-                            Source    = 'Package'
-                            Name      = $_.Name
-                            Version   = $_.Version
-                            Publisher = $_.ProviderName
                         }
                     }
             }
@@ -88,6 +77,17 @@ function Get-InstalledApp {
                         }
                     }
                 }
+            }
+            'Appx' {
+                Get-AppxPackage |
+                    ForEach-Object {
+                        [PSCustomObject]@{
+                            Source    = 'Appx'
+                            Name      = $_.Name
+                            Version   = $_.Version
+                            Publisher = $_.Publisher
+                        }
+                    }
             }
         }
     }

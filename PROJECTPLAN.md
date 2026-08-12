@@ -42,9 +42,7 @@ PowerShell 7 tooling for machine management and information gathering on Windows
 
 | # | Feature | Description | Priority | Effort |
 |---|---------|-------------|----------|--------|
-| FF#3 | Get-AppxPackage integration | Add AppX/UWP packages as a fifth source for `Get-InstalledApp`. | Medium | S |
 | FF#7 | Outdated version check | Compare each inventoried app's installed version against its latest available version, flag outdated ones. | Medium | M |
-| FF#11 | Independent export collection | Exporting Apps/Features currently requires running Show first (which also pages the result onscreen) since Export reads `$LastAppResult`/`$LastFeatureResult`. Give Export its own source selection and collection step, independent of Show, so exporting doesn't force an unwanted onscreen display first. | Medium | S |
 | FF#12 | Show Windows license key | Retrieve and display the Windows product/license key. | Low | S |
 | FF#13 | Get Autopilot hardware hash | Retrieve the hardware hash/ID needed for Windows Autopilot device registration. | Medium | S |
 | FF#14 | Comparable inventory output | Add comparison capability to inventory results where sensible (e.g. diff two exports, or cross-check sources against each other). | Medium | M |

@@ -33,3 +33,17 @@ Entries are in chronological order. Do not delete entries – mark superseded on
 
 ---
 
+## ADR-003: Background job with timeout for feature queries
+
+**Date:** 2026-08-07
+
+**Context:** `Get-WindowsOptionalFeature`/`Get-WindowsFeature` can hang indefinitely when the underlying DISM COM registration is broken, freezing the menu with no way out.
+
+**Decision:** Run the feature query in a background job (`Start-Job`), capped by a 30-second timeout (`$FeatureQueryTimeoutSeconds`); on timeout or job error, abort the job and show a remediation message (`sfc /scannow`, DISM `/RestoreHealth`) instead of the raw error.
+
+**Reasons:** A hung DISM call has no other cancellation point; a background job is the only way to enforce a deadline on it. The remediation message turns an opaque hang into an actionable fix.
+
+**Known drawbacks:** The job script block re-dot-sources the function file by path instead of inheriting session state, since jobs run in a separate process. Timeout is fixed, not user-configurable.
+
+---
+
