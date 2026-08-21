@@ -360,10 +360,11 @@ function Invoke-WingetAppAction {
         $Action = Read-Host 'Choice'
         switch ($Action) {
             'U' {
-                if (Update-WingetApp -Id $App.Id -Detached:$App.DetachedUpgrade) {
-                    Write-Information "$($App.Name) upgraded."
-                } else {
-                    Write-Warning "Upgrade failed for $($App.Name)."
+                switch (Update-WingetApp -Id $App.Id -Detached:$App.DetachedUpgrade) {
+                    'Upgraded' { Write-Information "$($App.Name) upgraded." }
+                    'UpToDate' { Write-Information "$($App.Name) is already up to date." }
+                    'Skipped' { Write-Information 'Cancelled.' }
+                    default { Write-Warning "Upgrade failed for $($App.Name)." }
                 }
             }
             'X' {

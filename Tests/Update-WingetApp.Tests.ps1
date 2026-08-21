@@ -10,11 +10,20 @@ Describe 'Update-WingetApp' {
         BeforeAll {
             Mock winget { $global:LASTEXITCODE = 0 }
         }
-        It 'invokes winget upgrade with the given id and returns true' {
-            Update-WingetApp -Id 'VideoLAN.VLC' | Should -BeTrue
+        It 'invokes winget upgrade with the given id and returns Upgraded' {
+            Update-WingetApp -Id 'VideoLAN.VLC' | Should -Be 'Upgraded'
             Should -Invoke winget -Times 1 -ParameterFilter {
                 $args -contains 'upgrade' -and $args -contains 'VideoLAN.VLC'
             }
+        }
+    }
+
+    Context 'no applicable upgrade found (already up to date)' {
+        BeforeAll {
+            Mock winget { $global:LASTEXITCODE = -1978335189 }
+        }
+        It 'returns UpToDate' {
+            Update-WingetApp -Id 'VideoLAN.VLC' | Should -Be 'UpToDate'
         }
     }
 
@@ -22,8 +31,8 @@ Describe 'Update-WingetApp' {
         BeforeAll {
             Mock winget { $global:LASTEXITCODE = 1 }
         }
-        It 'returns false' {
-            Update-WingetApp -Id 'VideoLAN.VLC' | Should -BeFalse
+        It 'returns Failed' {
+            Update-WingetApp -Id 'VideoLAN.VLC' | Should -Be 'Failed'
         }
     }
 
@@ -31,8 +40,8 @@ Describe 'Update-WingetApp' {
         BeforeAll {
             Mock winget { $global:LASTEXITCODE = 0 }
         }
-        It 'does not call winget' {
-            Update-WingetApp -Id 'VideoLAN.VLC' -WhatIf
+        It 'does not call winget and returns Skipped' {
+            Update-WingetApp -Id 'VideoLAN.VLC' -WhatIf | Should -Be 'Skipped'
             Should -Invoke winget -Times 0
         }
     }
@@ -42,8 +51,8 @@ Describe 'Update-WingetApp' {
             Mock winget { $global:LASTEXITCODE = 0 }
             Mock Start-Process { [PSCustomObject]@{ ExitCode = 0 } }
         }
-        It 'spawns cmd.exe with the winget upgrade command and returns true' {
-            Update-WingetApp -Id 'Microsoft.PowerShell' -Detached | Should -BeTrue
+        It 'spawns cmd.exe with the winget upgrade command and returns Upgraded' {
+            Update-WingetApp -Id 'Microsoft.PowerShell' -Detached | Should -Be 'Upgraded'
             Should -Invoke Start-Process -Times 1 -ParameterFilter {
                 $FilePath -eq 'cmd.exe' -and
                 $ArgumentList -contains 'upgrade' -and
@@ -53,12 +62,21 @@ Describe 'Update-WingetApp' {
         }
     }
 
+    Context '-Detached, no applicable upgrade found' {
+        BeforeAll {
+            Mock Start-Process { [PSCustomObject]@{ ExitCode = -1978335189 } }
+        }
+        It 'returns UpToDate' {
+            Update-WingetApp -Id 'Microsoft.PowerShell' -Detached | Should -Be 'UpToDate'
+        }
+    }
+
     Context '-Detached, upgrade fails' {
         BeforeAll {
             Mock Start-Process { [PSCustomObject]@{ ExitCode = 1 } }
         }
-        It 'returns false' {
-            Update-WingetApp -Id 'Microsoft.PowerShell' -Detached | Should -BeFalse
+        It 'returns Failed' {
+            Update-WingetApp -Id 'Microsoft.PowerShell' -Detached | Should -Be 'Failed'
         }
     }
 
@@ -67,8 +85,8 @@ Describe 'Update-WingetApp' {
             Mock winget { $global:LASTEXITCODE = 0 }
             Mock Start-Process { [PSCustomObject]@{ ExitCode = 0 } }
         }
-        It 'does not call winget or Start-Process' {
-            Update-WingetApp -Id 'Microsoft.PowerShell' -Detached -WhatIf
+        It 'does not call winget or Start-Process and returns Skipped' {
+            Update-WingetApp -Id 'Microsoft.PowerShell' -Detached -WhatIf | Should -Be 'Skipped'
             Should -Invoke winget -Times 0
             Should -Invoke Start-Process -Times 0
         }

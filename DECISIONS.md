@@ -89,3 +89,17 @@ Entries are in chronological order. Do not delete entries – mark superseded on
 
 ---
 
+## ADR-007: Update-WingetApp returns a status string; Install-/Uninstall-WingetApp stay bool
+
+**Date:** 2026-08-21
+
+**Context:** `winget upgrade` exits a distinct non-zero code when a package has no applicable upgrade — not a failure, but `Update-WingetApp`'s original `$LASTEXITCODE -eq 0` check (ADR-004) reported it as one, causing a false "Upgrade failed" warning for already-current apps (reported by the user for Claude Desktop App, reproduced directly).
+
+**Decision:** `Update-WingetApp` now returns a status string (`Upgraded`/`UpToDate`/`Failed`/`Skipped`) instead of `[bool]`. `Install-WingetApp` and `Uninstall-WingetApp` keep their `[bool]` contract unchanged.
+
+**Reasons:** Update is the only one of the three offered regardless of whether there's actually something to do — `Invoke-WingetAppAction` offers it whenever an app is installed, with no prior check for whether an upgrade exists. Install/Uninstall are only ever offered when the app's install state is already known (not-installed → Install offered; installed → Uninstall offered), so they don't have an analogous no-op-success case to distinguish from failure.
+
+**Known drawbacks:** The three sibling functions (ADR-005) no longer share a uniform return type, which could read as an oversight rather than a deliberate choice without this ADR. If Install or Uninstall ever gain their own no-op-success case (e.g. Install called on an already-installed app), the same string-status treatment should be applied there too, not a different scheme.
+
+---
+
