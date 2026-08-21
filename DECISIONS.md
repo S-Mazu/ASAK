@@ -75,3 +75,17 @@ Entries are in chronological order. Do not delete entries – mark superseded on
 
 ---
 
+## ADR-006: PowerShell 7 self-upgrade runs detached and never offers uninstall
+
+**Date:** 2026-08-21
+
+**Context:** ASAK requires PowerShell 7.6 to run at all. FF#38 needed to add PowerShell 7 (`Microsoft.PowerShell`) to the winget curated app list without letting the tool upgrade or remove the very interpreter it's currently running under.
+
+**Decision:** `Update-WingetApp` gained a `-Detached` switch that runs `winget upgrade` via a spawned `cmd.exe` process (`Start-Process ... -Wait -PassThru`) instead of in-process. The curated-app data model gained `UpgradeOnly`/`DetachedUpgrade` flags; `Invoke-WingetAppAction` uses them to skip the install/uninstall offers entirely for the PowerShell 7 entry — only `Upgrade` is ever shown, and the `X` (uninstall) switch case explicitly refuses rather than falling through to the normal uninstall path.
+
+**Reasons:** Upgrading the running `pwsh.exe` in-process risks the installer trying to replace files the current session has locked; a detached process keeps that risk out of ASAK's own process tree. Uninstalling the interpreter running ASAK would kill the session mid-action — not a recoverable mistake, so it's blocked structurally rather than relying on the usual confirmation prompt.
+
+**Known drawbacks:** PowerShell 7 is the only curated app with this special-cased behavior, so `Invoke-WingetAppAction` now has two behavior paths instead of one uniform flow; the two flags have so far only ever co-occurred on this one entry, so a future app needing just one of the two behaviors isn't cleanly expressible yet.
+
+---
+

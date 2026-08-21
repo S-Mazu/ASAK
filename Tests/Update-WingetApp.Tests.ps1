@@ -36,4 +36,41 @@ Describe 'Update-WingetApp' {
             Should -Invoke winget -Times 0
         }
     }
+
+    Context '-Detached, upgrade succeeds' {
+        BeforeAll {
+            Mock winget { $global:LASTEXITCODE = 0 }
+            Mock Start-Process { [PSCustomObject]@{ ExitCode = 0 } }
+        }
+        It 'spawns cmd.exe with the winget upgrade command and returns true' {
+            Update-WingetApp -Id 'Microsoft.PowerShell' -Detached | Should -BeTrue
+            Should -Invoke Start-Process -Times 1 -ParameterFilter {
+                $FilePath -eq 'cmd.exe' -and
+                $ArgumentList -contains 'upgrade' -and
+                $ArgumentList -contains 'Microsoft.PowerShell'
+            }
+            Should -Invoke winget -Times 0
+        }
+    }
+
+    Context '-Detached, upgrade fails' {
+        BeforeAll {
+            Mock Start-Process { [PSCustomObject]@{ ExitCode = 1 } }
+        }
+        It 'returns false' {
+            Update-WingetApp -Id 'Microsoft.PowerShell' -Detached | Should -BeFalse
+        }
+    }
+
+    Context '-Detached -WhatIf' {
+        BeforeAll {
+            Mock winget { $global:LASTEXITCODE = 0 }
+            Mock Start-Process { [PSCustomObject]@{ ExitCode = 0 } }
+        }
+        It 'does not call winget or Start-Process' {
+            Update-WingetApp -Id 'Microsoft.PowerShell' -Detached -WhatIf
+            Should -Invoke winget -Times 0
+            Should -Invoke Start-Process -Times 0
+        }
+    }
 }

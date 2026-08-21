@@ -14,10 +14,18 @@ $LastFeatureResult = $null
 $LastModuleResult = $null
 
 $Script:WingetCuratedApps = @(
-    [PSCustomObject]@{ Name = 'Docker Desktop'; Id = 'Docker.DockerDesktop'; ProcessName = 'Docker Desktop' }
-    [PSCustomObject]@{ Name = 'Claude Code'; Id = 'Anthropic.ClaudeCode'; ProcessName = $null }
-    [PSCustomObject]@{ Name = 'VLC Player'; Id = 'VideoLAN.VLC'; ProcessName = 'vlc' }
-    [PSCustomObject]@{ Name = 'Chrome Browser'; Id = 'Google.Chrome'; ProcessName = 'chrome' }
+    [PSCustomObject]@{ Name = 'Docker Desktop'; Id = 'Docker.DockerDesktop'; ProcessName = 'Docker Desktop'; UpgradeOnly = $false; DetachedUpgrade = $false }
+    [PSCustomObject]@{ Name = 'Claude Code'; Id = 'Anthropic.ClaudeCode'; ProcessName = $null; UpgradeOnly = $false; DetachedUpgrade = $false }
+    [PSCustomObject]@{ Name = 'VLC Player'; Id = 'VideoLAN.VLC'; ProcessName = 'vlc'; UpgradeOnly = $false; DetachedUpgrade = $false }
+    [PSCustomObject]@{ Name = 'Chrome Browser'; Id = 'Google.Chrome'; ProcessName = 'chrome'; UpgradeOnly = $false; DetachedUpgrade = $false }
+    [PSCustomObject]@{ Name = 'Gimp'; Id = 'GIMP.GIMP'; ProcessName = 'gimp*'; UpgradeOnly = $false; DetachedUpgrade = $false }
+    [PSCustomObject]@{ Name = 'Teams for Business'; Id = 'Microsoft.Teams'; ProcessName = 'ms-teams'; UpgradeOnly = $false; DetachedUpgrade = $false }
+    [PSCustomObject]@{ Name = 'OneDrive for Business'; Id = 'Microsoft.OneDrive'; ProcessName = 'OneDrive'; UpgradeOnly = $false; DetachedUpgrade = $false }
+    [PSCustomObject]@{ Name = 'Git for Windows'; Id = 'Git.Git'; ProcessName = $null; UpgradeOnly = $false; DetachedUpgrade = $false }
+    [PSCustomObject]@{ Name = 'Claude Desktop App'; Id = 'Anthropic.Claude'; ProcessName = 'Claude'; UpgradeOnly = $false; DetachedUpgrade = $false }
+    [PSCustomObject]@{ Name = 'Spotify'; Id = 'Spotify.Spotify'; ProcessName = 'Spotify'; UpgradeOnly = $false; DetachedUpgrade = $false }
+    [PSCustomObject]@{ Name = 'Irfanview'; Id = 'IrfanSkiljan.IrfanView'; ProcessName = 'i_view*'; UpgradeOnly = $false; DetachedUpgrade = $false }
+    [PSCustomObject]@{ Name = 'PowerShell 7 (upgrade only)'; Id = 'Microsoft.PowerShell'; ProcessName = $null; UpgradeOnly = $true; DetachedUpgrade = $true }
 )
 
 function Select-AppSource {
@@ -341,32 +349,41 @@ function Invoke-WingetAppAction {
         [PSCustomObject]$App
     )
 
-    if (Test-WingetAppInstalled -Id $App.Id) {
-        Write-Information "$($App.Name) is already installed."
-        Write-Information '  U) Upgrade   X) Uninstall   C) Cancel'
+    if ($App.UpgradeOnly -or (Test-WingetAppInstalled -Id $App.Id)) {
+        if ($App.UpgradeOnly) {
+            Write-Information "$($App.Name) is managed as upgrade-only."
+            Write-Information '  U) Upgrade   C) Cancel'
+        } else {
+            Write-Information "$($App.Name) is already installed."
+            Write-Information '  U) Upgrade   X) Uninstall   C) Cancel'
+        }
         $Action = Read-Host 'Choice'
         switch ($Action) {
             'U' {
-                if (Update-WingetApp -Id $App.Id) {
+                if (Update-WingetApp -Id $App.Id -Detached:$App.DetachedUpgrade) {
                     Write-Information "$($App.Name) upgraded."
                 } else {
                     Write-Warning "Upgrade failed for $($App.Name)."
                 }
             }
             'X' {
-                $ProceedWithUninstall = $true
-                if ($App.ProcessName -and (Test-ProcessRunning -Name $App.ProcessName)) {
-                    $RunningConfirm = Read-Host "$($App.Name) appears to be running. Uninstall anyway? (y/N)"
-                    $ProceedWithUninstall = $RunningConfirm -match '^[Yy]'
-                }
-                if ($ProceedWithUninstall) {
-                    if (Uninstall-WingetApp -Id $App.Id) {
-                        Write-Information "$($App.Name) uninstalled."
-                    } else {
-                        Write-Warning "Uninstall failed for $($App.Name)."
-                    }
+                if ($App.UpgradeOnly) {
+                    Write-Warning 'Uninstall is not available for this app.'
                 } else {
-                    Write-Information 'Cancelled.'
+                    $ProceedWithUninstall = $true
+                    if ($App.ProcessName -and (Test-ProcessRunning -Name $App.ProcessName)) {
+                        $RunningConfirm = Read-Host "$($App.Name) appears to be running. Uninstall anyway? (y/N)"
+                        $ProceedWithUninstall = $RunningConfirm -match '^[Yy]'
+                    }
+                    if ($ProceedWithUninstall) {
+                        if (Uninstall-WingetApp -Id $App.Id) {
+                            Write-Information "$($App.Name) uninstalled."
+                        } else {
+                            Write-Warning "Uninstall failed for $($App.Name)."
+                        }
+                    } else {
+                        Write-Information 'Cancelled.'
+                    }
                 }
             }
             default { Write-Information 'Cancelled.' }
