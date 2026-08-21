@@ -47,3 +47,31 @@ Entries are in chronological order. Do not delete entries – mark superseded on
 
 ---
 
+## ADR-004: Exit-code check for winget install-status, not text parsing
+
+**Date:** 2026-08-21
+
+**Context:** `Get-InstalledApp`'s `Winget` source parses `winget list`'s fixed-width text output, a parser the code itself flags as breaking on any winget CLI format change. FF#36 needed a per-app install-status check.
+
+**Decision:** `Test-WingetAppInstalled` runs `winget list --id <Id> --exact` and checks `$LASTEXITCODE -eq 0`, instead of parsing output text.
+
+**Reasons:** winget's exit code reliably distinguishes found from not-found — confirmed empirically against real installed and not-installed packages — without depending on column layout at all.
+
+**Known drawbacks:** `Install-WingetApp`/`Update-WingetApp`/`Uninstall-WingetApp` follow the same exit-code-only approach, so callers get a boolean success/fail with no more specific failure reason (e.g. can't distinguish "already installed" from "network error").
+
+---
+
+## ADR-005: One verb-named function per winget action, no shared helper
+
+**Date:** 2026-08-21
+
+**Context:** `Install-WingetApp`, `Update-WingetApp`, and `Uninstall-WingetApp` — the first `SupportsShouldProcess` functions in the repo — share near-identical shape: `ShouldProcess` gate, `& winget <verb> --id $Id ...`, `$LASTEXITCODE -eq 0`.
+
+**Decision:** Kept as three separate functions/files rather than one function with an `-Action` parameter or a shared private helper.
+
+**Reasons:** Install/Update/Uninstall are each approved PowerShell verbs; matches `FILEMAP.md`'s one-function-per-file convention; keeps each function's `ShouldProcess` message accurate to what it actually does.
+
+**Known drawbacks:** The `ShouldProcess` gate, exit-code check, and argument shape are duplicated three times; a future winget action repeats the pattern rather than extending a parameter set.
+
+---
+

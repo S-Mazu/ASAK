@@ -13,6 +13,13 @@ $LastAppResult = $null
 $LastFeatureResult = $null
 $LastModuleResult = $null
 
+$Script:WingetCuratedApps = @(
+    [PSCustomObject]@{ Name = 'Docker Desktop'; Id = 'Docker.DockerDesktop'; ProcessName = 'Docker Desktop' }
+    [PSCustomObject]@{ Name = 'Claude Code'; Id = 'Anthropic.ClaudeCode'; ProcessName = $null }
+    [PSCustomObject]@{ Name = 'VLC Player'; Id = 'VideoLAN.VLC'; ProcessName = 'vlc' }
+    [PSCustomObject]@{ Name = 'Chrome Browser'; Id = 'Google.Chrome'; ProcessName = 'chrome' }
+)
+
 function Select-AppSource {
     $Sources = @(
         [PSCustomObject]@{
@@ -328,6 +335,93 @@ function Show-FeatureManagementMenu {
     } while ($SubChoice -ne '0')
 }
 
+function Invoke-WingetAppAction {
+    param(
+        [Parameter(Mandatory)]
+        [PSCustomObject]$App
+    )
+
+    if (Test-WingetAppInstalled -Id $App.Id) {
+        Write-Information "$($App.Name) is already installed."
+        Write-Information '  U) Upgrade   X) Uninstall   C) Cancel'
+        $Action = Read-Host 'Choice'
+        switch ($Action) {
+            'U' {
+                if (Update-WingetApp -Id $App.Id) {
+                    Write-Information "$($App.Name) upgraded."
+                } else {
+                    Write-Warning "Upgrade failed for $($App.Name)."
+                }
+            }
+            'X' {
+                $ProceedWithUninstall = $true
+                if ($App.ProcessName -and (Test-ProcessRunning -Name $App.ProcessName)) {
+                    $RunningConfirm = Read-Host "$($App.Name) appears to be running. Uninstall anyway? (y/N)"
+                    $ProceedWithUninstall = $RunningConfirm -match '^[Yy]'
+                }
+                if ($ProceedWithUninstall) {
+                    if (Uninstall-WingetApp -Id $App.Id) {
+                        Write-Information "$($App.Name) uninstalled."
+                    } else {
+                        Write-Warning "Uninstall failed for $($App.Name)."
+                    }
+                } else {
+                    Write-Information 'Cancelled.'
+                }
+            }
+            default { Write-Information 'Cancelled.' }
+        }
+    } else {
+        $Confirm = Read-Host "$($App.Name) is not installed. Install via winget? (y/N)"
+        if ($Confirm -match '^[Yy]') {
+            if (Install-WingetApp -Id $App.Id) {
+                Write-Information "$($App.Name) installed."
+            } else {
+                Write-Warning "Install failed for $($App.Name)."
+            }
+        } else {
+            Write-Information 'Cancelled.'
+        }
+    }
+}
+
+function Show-WingetMenu {
+    do {
+        Write-Information ''
+        Write-Information '----- Winget - Common Apps -----'
+        for ($i = 0; $i -lt $Script:WingetCuratedApps.Count; $i++) {
+            Write-Information "$($i + 1)) $($Script:WingetCuratedApps[$i].Name)"
+        }
+        Write-Information '0) Back'
+        $AppChoice = Read-Host 'Choice'
+
+        $Index = 0
+        if ($AppChoice -eq '0') {
+            continue
+        } elseif ([int]::TryParse($AppChoice, [ref]$Index) -and $Index -ge 1 -and $Index -le $Script:WingetCuratedApps.Count) {
+            Invoke-WingetAppAction -App $Script:WingetCuratedApps[$Index - 1]
+        } else {
+            Write-Warning 'Invalid choice.'
+        }
+    } while ($AppChoice -ne '0')
+}
+
+function Show-SoftwareInstallMenu {
+    do {
+        Write-Information ''
+        Write-Information '----- Software Install -----'
+        Write-Information '1) Winget'
+        Write-Information '0) Back'
+        $SubChoice = Read-Host 'Choice'
+
+        switch ($SubChoice) {
+            '1' { Show-WingetMenu }
+            '0' { }
+            default { Write-Warning 'Invalid choice.' }
+        }
+    } while ($SubChoice -ne '0')
+}
+
 function Show-VersionInfoMenu {
     Write-Information ''
     Write-Information "ASAK version $AsakVersion"
@@ -336,6 +430,7 @@ function Show-VersionInfoMenu {
     Write-Information '  PowerShell Modules - inventory installed PowerShell modules, view onscreen or export to CSV.'
     Write-Information '  Installed Apps     - inventory installed apps, view onscreen or export to CSV.'
     Write-Information '  Windows Features   - inventory installed Windows features, view onscreen or export to CSV.'
+    Write-Information '  Software Install   - check/install/upgrade/uninstall common apps via winget.'
     Write-Information '  Version Info       - this screen.'
     Write-Information ''
     Write-Information 'Release notes: see HISTORY.md.'
@@ -350,7 +445,8 @@ do {
     Write-Information '1) PowerShell Modules'
     Write-Information '2) Installed Apps'
     Write-Information '3) Windows Features'
-    Write-Information '4) Version Info'
+    Write-Information '4) Software Install'
+    Write-Information '5) Version Info'
     Write-Information '0) Exit'
     $MenuChoice = Read-Host 'Choice'
 
@@ -358,7 +454,8 @@ do {
         '1' { Clear-Host; Show-ModuleManagementMenu; Clear-Host }
         '2' { Clear-Host; Show-AppManagementMenu; Clear-Host }
         '3' { Clear-Host; Show-FeatureManagementMenu; Clear-Host }
-        '4' { Clear-Host; Show-VersionInfoMenu; Clear-Host }
+        '4' { Clear-Host; Show-SoftwareInstallMenu; Clear-Host }
+        '5' { Clear-Host; Show-VersionInfoMenu; Clear-Host }
         '0' { }
         default { Write-Warning 'Invalid choice.' }
     }
