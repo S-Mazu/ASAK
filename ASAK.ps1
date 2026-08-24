@@ -26,6 +26,7 @@ $Script:WingetCuratedApps = @(
     [PSCustomObject]@{ Name = 'Spotify'; Id = 'Spotify.Spotify'; ProcessName = 'Spotify'; UpgradeOnly = $false; DetachedUpgrade = $false }
     [PSCustomObject]@{ Name = 'Irfanview'; Id = 'IrfanSkiljan.IrfanView'; ProcessName = 'i_view*'; UpgradeOnly = $false; DetachedUpgrade = $false }
     [PSCustomObject]@{ Name = 'PowerShell 7 (upgrade only)'; Id = 'Microsoft.PowerShell'; ProcessName = $null; UpgradeOnly = $true; DetachedUpgrade = $true }
+    [PSCustomObject]@{ Name = 'Notepad++'; Id = 'Notepad++.Notepad++'; ProcessName = 'notepad++'; UpgradeOnly = $false; DetachedUpgrade = $false }
 )
 
 function Select-AppSource {
@@ -403,6 +404,63 @@ function Invoke-WingetAppAction {
     }
 }
 
+function Select-WingetUpgradeScope {
+    Write-Information ''
+    Write-Information 'Select which apps to upgrade:'
+    Write-Information '  1) Curated - only pending upgrades for apps in this menu'
+    Write-Information '  2) All     - every winget-detected upgrade on this machine'
+    $Choice = Read-Host 'Scope'
+
+    $ScopeName = switch ($Choice) {
+        '1' { 'Curated' }
+        '2' { 'All' }
+        default { $null }
+    }
+
+    if (-not $ScopeName) {
+        Write-Warning 'No valid scope selected.'
+        return $null
+    }
+
+    return $ScopeName
+}
+
+function Show-WingetBulkUpgradeMenu {
+    $ScopeName = Select-WingetUpgradeScope
+    if (-not $ScopeName) {
+        return
+    }
+
+    $Pending = Get-WingetUpgrade
+    if ($ScopeName -eq 'Curated') {
+        $CuratedIds = $Script:WingetCuratedApps.Id
+        $Pending = $Pending | Where-Object { $_.Id -in $CuratedIds }
+    }
+
+    if (-not $Pending) {
+        Write-Information 'No pending upgrades found.'
+        return
+    }
+
+    $Apps = foreach ($PendingApp in $Pending) {
+        $CuratedMatch = $Script:WingetCuratedApps | Where-Object { $_.Id -eq $PendingApp.Id } | Select-Object -First 1
+        [PSCustomObject]@{
+            Name            = $PendingApp.Name
+            Id              = $PendingApp.Id
+            DetachedUpgrade = if ($CuratedMatch) { $CuratedMatch.DetachedUpgrade } else { $false }
+        }
+    }
+
+    $Result = Invoke-WingetBulkUpgrade -App $Apps
+    try {
+        $Result | Format-Table -AutoSize -Wrap | Out-Host -Paging
+    } catch {
+        if ($_.CategoryInfo.Category -ne 'OperationStopped') {
+            throw
+        }
+    }
+}
+
 function Show-WingetMenu {
     do {
         Write-Information ''
@@ -410,12 +468,15 @@ function Show-WingetMenu {
         for ($i = 0; $i -lt $Script:WingetCuratedApps.Count; $i++) {
             Write-Information "$($i + 1)) $($Script:WingetCuratedApps[$i].Name)"
         }
+        Write-Information 'B) Bulk-upgrade pending updates'
         Write-Information '0) Back'
         $AppChoice = Read-Host 'Choice'
 
         $Index = 0
         if ($AppChoice -eq '0') {
             continue
+        } elseif ($AppChoice -match '^[Bb]$') {
+            Show-WingetBulkUpgradeMenu
         } elseif ([int]::TryParse($AppChoice, [ref]$Index) -and $Index -ge 1 -and $Index -le $Script:WingetCuratedApps.Count) {
             Invoke-WingetAppAction -App $Script:WingetCuratedApps[$Index - 1]
         } else {
@@ -448,7 +509,7 @@ function Show-VersionInfoMenu {
     Write-Information '  PowerShell Modules - inventory installed PowerShell modules, view onscreen or export to CSV.'
     Write-Information '  Installed Apps     - inventory installed apps, view onscreen or export to CSV.'
     Write-Information '  Windows Features   - inventory installed Windows features, view onscreen or export to CSV.'
-    Write-Information '  Software Install   - check/install/upgrade/uninstall common apps via winget.'
+    Write-Information '  Software Install   - check/install/upgrade/uninstall common apps via winget; bulk-upgrade pending updates.'
     Write-Information '  Version Info       - this screen.'
     Write-Information ''
     Write-Information 'Release notes: see HISTORY.md.'

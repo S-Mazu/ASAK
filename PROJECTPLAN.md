@@ -28,6 +28,7 @@ PowerShell 7 tooling for machine management and information gathering on Windows
 
 | # | Bug | Description | Priority |
 |---|-----|-------------|----------|
+| BUG#1 | `Get-InstalledApp` Winget source drops Publisher on non-English Windows | The `Winget` branch looks up the winget-list `Source` column by the literal header text `'Source'`; winget localizes that header (observed on this machine's German locale: `Quelle`), so `Publisher` is silently `$null` for every Winget-sourced row. | Medium |
 
 ---
 
@@ -65,6 +66,8 @@ PowerShell 7 tooling for machine management and information gathering on Windows
 | FF#31 | DISM and SFC troubleshooting | Run DISM `/RestoreHealth` and SFC `/scannow` for system file repair. State-changing — needs `ShouldProcess`. | Medium | M |
 | FF#32 | Join domain | Join the computer to an Active Directory domain. State-changing — needs `ShouldProcess`. | Medium | M |
 | FF#33 | Network stats | Show IP configuration, gateway, and DNS servers. | Medium | S |
+| FF#39 | Add Notepad++ to curated apps | Add Notepad++ (`Notepad++.Notepad++`) to `Script:WingetCuratedApps` so it's installable/upgradable/uninstallable from the Software Install menu. Implemented, `tools/verify.ps1` passes, awaiting `Live-Test.`. | Low | S |
+| FF#40 | Bulk-upgrade winget apps | Menu command to upgrade all pending winget updates in one step; user chooses curated-list-only or all machine-detected upgrades. State-changing — needs `ShouldProcess`. Implemented, `tools/verify.ps1` passes, awaiting `Live-Test.`. | Medium | M |
 
 ---
 

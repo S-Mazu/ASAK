@@ -103,3 +103,31 @@ Entries are in chronological order. Do not delete entries – mark superseded on
 
 ---
 
+## ADR-008: Position-based column parsing for Get-WingetUpgrade
+
+**Date:** 2026-08-24
+
+**Context:** `winget upgrade`'s column headers are localized by the OS locale (observed on this German-locale test machine: `Available` → `Verfügbar`, `Source` → `Quelle`), while `Name`/`ID`/`Version` and column order stay stable. `Get-InstalledApp`'s existing `Winget` parser looks up columns by hardcoded English header text and breaks silently under this localization (see the bug this ADR is paired with in `PROJECTPLAN.md`).
+
+**Decision:** `Get-WingetUpgrade` derives column boundaries from the header row's word-start offsets (same technique as `Get-InstalledApp`), but reads each row's values by column **position** (Name=0, Id=1, Version=2, Available=3), not by header-text lookup.
+
+**Reasons:** The only approach immune to header localization; winget has no structured/JSON output mode to fall back to (confirmed by `Get-InstalledApp`'s own comment).
+
+**Known drawbacks:** Silently misreads output if winget ever reorders columns; a second, differently-keyed text parser now exists alongside `Get-InstalledApp`'s rather than one shared, fixed implementation.
+
+---
+
+## ADR-009: Batch-level ShouldProcess for Invoke-WingetBulkUpgrade
+
+**Date:** 2026-08-24
+
+**Context:** `Invoke-WingetBulkUpgrade` loops `Update-WingetApp`, which already gates itself with its own `ShouldProcess`. ADR-005 established one verb-named function per winget action, no shared helper, for Install/Update/Uninstall.
+
+**Decision:** `Invoke-WingetBulkUpgrade` is a new orchestrating function — not a peer of Install/Update/Uninstall, a caller of one of them — with a single `ShouldProcess` gate for the whole batch, relying on `$WhatIfPreference` propagating automatically into each nested `Update-WingetApp` call.
+
+**Reasons:** A second per-app gate here would double the `What if:` output and add nothing, since the nested call already gates itself.
+
+**Known drawbacks:** `Invoke-WingetBulkUpgrade`'s `-WhatIf` output describes the batch, not each app individually, unlike every other `ShouldProcess` function in the repo.
+
+---
+
