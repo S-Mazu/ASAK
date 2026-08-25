@@ -461,6 +461,32 @@ function Show-WingetBulkUpgradeMenu {
     }
 }
 
+function Show-WingetPendingMenu {
+    $ScopeName = Select-WingetUpgradeScope
+    if (-not $ScopeName) {
+        return
+    }
+
+    $Pending = Get-WingetUpgrade
+    if ($ScopeName -eq 'Curated') {
+        $CuratedIds = $Script:WingetCuratedApps.Id
+        $Pending = $Pending | Where-Object { $_.Id -in $CuratedIds }
+    }
+
+    if (-not $Pending) {
+        Write-Information 'No pending upgrades found.'
+        return
+    }
+
+    try {
+        $Pending | Format-Table -AutoSize -Wrap | Out-Host -Paging
+    } catch {
+        if ($_.CategoryInfo.Category -ne 'OperationStopped') {
+            throw
+        }
+    }
+}
+
 function Show-WingetMenu {
     do {
         Write-Information ''
@@ -468,6 +494,7 @@ function Show-WingetMenu {
         for ($i = 0; $i -lt $Script:WingetCuratedApps.Count; $i++) {
             Write-Information "$($i + 1)) $($Script:WingetCuratedApps[$i].Name)"
         }
+        Write-Information 'S) Show pending updates'
         Write-Information 'B) Bulk-upgrade pending updates'
         Write-Information '0) Back'
         $AppChoice = Read-Host 'Choice'
@@ -475,6 +502,8 @@ function Show-WingetMenu {
         $Index = 0
         if ($AppChoice -eq '0') {
             continue
+        } elseif ($AppChoice -match '^[Ss]$') {
+            Show-WingetPendingMenu
         } elseif ($AppChoice -match '^[Bb]$') {
             Show-WingetBulkUpgradeMenu
         } elseif ([int]::TryParse($AppChoice, [ref]$Index) -and $Index -ge 1 -and $Index -le $Script:WingetCuratedApps.Count) {
@@ -509,7 +538,7 @@ function Show-VersionInfoMenu {
     Write-Information '  PowerShell Modules - inventory installed PowerShell modules, view onscreen or export to CSV.'
     Write-Information '  Installed Apps     - inventory installed apps, view onscreen or export to CSV.'
     Write-Information '  Windows Features   - inventory installed Windows features, view onscreen or export to CSV.'
-    Write-Information '  Software Install   - check/install/upgrade/uninstall common apps via winget; bulk-upgrade pending updates.'
+    Write-Information '  Software Install   - check/install/upgrade/uninstall common apps via winget; show or bulk-upgrade pending updates.'
     Write-Information '  Version Info       - this screen.'
     Write-Information ''
     Write-Information 'Release notes: see HISTORY.md.'
