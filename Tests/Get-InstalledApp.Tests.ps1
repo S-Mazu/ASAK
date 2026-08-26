@@ -2,7 +2,13 @@
 #requires -Modules Pester
 
 BeforeAll {
+    . (Join-Path $PSScriptRoot '..' 'Functions' 'ConvertFrom-WingetTable.ps1')
     . (Join-Path $PSScriptRoot '..' 'Functions' 'Get-InstalledApp.ps1')
+
+    function Format-WingetTableLine {
+        param([string[]]$Value, [int]$Width = 14)
+        -join ($Value | ForEach-Object { $_.PadRight($Width) })
+    }
 }
 
 Describe 'Get-InstalledApp' {
@@ -42,18 +48,31 @@ Describe 'Get-InstalledApp' {
 
     Context 'Winget source' {
         BeforeAll {
-            Mock winget {
-                @(
-                    'Name       Id            Version   Source'
-                    '----------------------------------------'
-                    'Winget App WingetApp.Id  4.0.0     winget'
-                )
-            }
+            $HeaderLine = Format-WingetTableLine 'Name', 'Id', 'Version', 'Source'
+            $DataLine = Format-WingetTableLine 'Winget App', 'WingetApp.Id', '4.0.0', 'winget'
+            Mock winget { @($HeaderLine, ('-' * 56), $DataLine) }
         }
         It 'parses winget list output and tags Source Winget' {
             $Result = Get-InstalledApp -Source Winget
             $Result.Source | Should -Contain 'Winget'
             $Result[0].Name | Should -Be 'Winget App'
+            $Result[0].Version | Should -Be '4.0.0'
+        }
+        It 'leaves Publisher empty - winget list carries no publisher data' {
+            (Get-InstalledApp -Source Winget)[0].Publisher | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'Winget source with German-locale headers' {
+        BeforeAll {
+            $HeaderLine = Format-WingetTableLine 'Name', 'Id', 'Version', 'Verfuegbar', 'Quelle'
+            $DataLine = Format-WingetTableLine 'Winget App', 'WingetApp.Id', '4.0.0', '4.1.0', 'winget'
+            Mock winget { @($HeaderLine, ('-' * 70), $DataLine) }
+        }
+        It 'still resolves Name and Version by column position' {
+            $Result = Get-InstalledApp -Source Winget
+            $Result[0].Name | Should -Be 'Winget App'
+            $Result[0].Version | Should -Be '4.0.0'
         }
     }
 

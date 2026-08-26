@@ -28,7 +28,6 @@ PowerShell 7 tooling for machine management and information gathering on Windows
 
 | # | Bug | Description | Priority |
 |---|-----|-------------|----------|
-| BUG#1 | `Get-InstalledApp` Winget source drops Publisher on non-English Windows | The `Winget` branch looks up the winget-list `Source` column by the literal header text `'Source'`; winget localizes that header (observed on this machine's German locale: `Quelle`), so `Publisher` is silently `$null` for every Winget-sourced row. | Medium |
 
 ---
 
@@ -66,7 +65,6 @@ PowerShell 7 tooling for machine management and information gathering on Windows
 | FF#31 | DISM and SFC troubleshooting | Run DISM `/RestoreHealth` and SFC `/scannow` for system file repair. State-changing — needs `ShouldProcess`. | Medium | M |
 | FF#32 | Join domain | Join the computer to an Active Directory domain. State-changing — needs `ShouldProcess`. | Medium | M |
 | FF#33 | Network stats | Show IP configuration, gateway, and DNS servers. | Medium | S |
-| FF#41 | Show all winget managed items | Read-only counterpart to bulk-upgrade: same Curated/All scope prompt, then list pending winget upgrades (Name/Id/Version/Available) via `Get-WingetUpgrade` without performing any upgrade. | Medium | S |
 
 ---
 

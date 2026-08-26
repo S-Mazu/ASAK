@@ -40,41 +40,18 @@ function Get-InstalledApp {
                     }
             }
             'Winget' {
-                # winget list has no structured output mode; columns are fixed-width,
-                # located from the header row's word-start offsets. A winget CLI
-                # format change would break this parser.
-                $Lines = (& winget list --disable-interactivity 2>$null) |
-                    Where-Object { $_.Trim() -ne '' }
-                $HeaderIndex = 0
-                while ($HeaderIndex -lt $Lines.Count -and $Lines[$HeaderIndex] -notmatch '^Name\s') {
-                    $HeaderIndex++
-                }
-                if ($HeaderIndex -lt $Lines.Count) {
-                    $HeaderLine = $Lines[$HeaderIndex]
-                    $DataLines = $Lines[($HeaderIndex + 2)..($Lines.Count - 1)]
-                    $ColumnMatches = [regex]::Matches($HeaderLine, '\S+(?:\s\S+)*')
-                    $Columns = for ($i = 0; $i -lt $ColumnMatches.Count; $i++) {
-                        [PSCustomObject]@{
-                            Name  = $ColumnMatches[$i].Value.Trim()
-                            Start = $ColumnMatches[$i].Index
-                            End   = if ($i -lt $ColumnMatches.Count - 1) { $ColumnMatches[$i + 1].Index } else { -1 }
-                        }
-                    }
-                    foreach ($Line in $DataLines) {
-                        $Fields = @{}
-                        foreach ($Column in $Columns) {
-                            if ($Column.Start -lt $Line.Length) {
-                                $Length = if ($Column.End -eq -1) { $Line.Length - $Column.Start } else { $Column.End - $Column.Start }
-                                $EndIndex = [Math]::Min($Line.Length, $Column.Start + $Length)
-                                $Fields[$Column.Name] = $Line.Substring($Column.Start, $EndIndex - $Column.Start).Trim()
-                            }
-                        }
-                        [PSCustomObject]@{
-                            Source    = 'Winget'
-                            Name      = $Fields['Name']
-                            Version   = $Fields['Version']
-                            Publisher = $Fields['Source']
-                        }
+                # Fields are read by column position via ConvertFrom-WingetTable
+                # (ADR-010). winget list carries no publisher information at
+                # all, so Publisher stays empty for this source - its Source
+                # column names the package source (winget/msstore), not a
+                # publisher.
+                $Rows = @(ConvertFrom-WingetTable -Line (& winget list --disable-interactivity 2>$null))
+                foreach ($Values in $Rows) {
+                    [PSCustomObject]@{
+                        Source    = 'Winget'
+                        Name      = $Values[0]
+                        Version   = $Values[2]
+                        Publisher = $null
                     }
                 }
             }
