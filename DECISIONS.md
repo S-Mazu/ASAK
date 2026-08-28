@@ -105,6 +105,8 @@ Entries are in chronological order. Do not delete entries – mark superseded on
 
 ## ADR-008: Position-based column parsing for Get-WingetUpgrade
 
+**Superseded by ADR-010.**
+
 **Date:** 2026-08-24
 
 **Context:** `winget upgrade`'s column headers are localized by the OS locale (observed on this German-locale test machine: `Available` → `Verfügbar`, `Source` → `Quelle`), while `Name`/`ID`/`Version` and column order stay stable. `Get-InstalledApp`'s existing `Winget` parser looks up columns by hardcoded English header text and breaks silently under this localization (see the bug this ADR is paired with in `PROJECTPLAN.md`).
@@ -131,3 +133,16 @@ Entries are in chronological order. Do not delete entries – mark superseded on
 
 ---
 
+## ADR-010: One shared winget table parser, read by column position
+
+**Date:** 2026-08-26
+
+**Context:** ADR-008 made `Get-WingetUpgrade` read columns by position, but left `Get-InstalledApp`'s header-text lookup in place — a second parser and an open bug. `winget list` additionally emits 4 or 5 columns depending on whether any row has a pending upgrade, so the source column has no fixed index.
+
+**Decision:** `ConvertFrom-WingetTable` is the single parser for every winget table. It emits one value array per data row, padded to the header's column count, read by position. `Get-InstalledApp` and `Get-WingetUpgrade` both consume it. Supersedes ADR-008.
+
+**Reasons:** Immune to header localization; winget offers no structured output mode. Padding to the column count lets callers index a trailing column without a length check, which the variable `Available` column requires.
+
+**Known drawbacks:** Still misreads output if winget reorders columns. `^Name\s` remains the one piece of header text relied on.
+
+---

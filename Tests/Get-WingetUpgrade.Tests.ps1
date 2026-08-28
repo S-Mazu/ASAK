@@ -2,6 +2,7 @@
 #requires -Modules Pester
 
 BeforeAll {
+    . (Join-Path $PSScriptRoot '..' 'Functions' 'ConvertFrom-WingetTable.ps1')
     . (Join-Path $PSScriptRoot '..' 'Functions' 'Get-WingetUpgrade.ps1')
 
     # Columns must be built with a real fixed-width layout: at least two spaces

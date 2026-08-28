@@ -28,7 +28,6 @@ PowerShell 7 tooling for machine management and information gathering on Windows
 
 | # | Bug | Description | Priority |
 |---|-----|-------------|----------|
-| BUG#1 | `Get-InstalledApp` Winget source drops Publisher on non-English Windows | The `Winget` branch looks up the winget-list `Source` column by the literal header text `'Source'`; winget localizes that header (observed on this machine's German locale: `Quelle`), so `Publisher` is silently `$null` for every Winget-sourced row. | Medium |
 
 ---
 
