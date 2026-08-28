@@ -91,6 +91,8 @@ Entries are in chronological order. Do not delete entries – mark superseded on
 
 ## ADR-007: Update-WingetApp returns a status string; Install-/Uninstall-WingetApp stay bool
 
+**Superseded by ADR-011.**
+
 **Date:** 2026-08-21
 
 **Context:** `winget upgrade` exits a distinct non-zero code when a package has no applicable upgrade — not a failure, but `Update-WingetApp`'s original `$LASTEXITCODE -eq 0` check (ADR-004) reported it as one, causing a false "Upgrade failed" warning for already-current apps (reported by the user for Claude Desktop App, reproduced directly).
@@ -121,6 +123,8 @@ Entries are in chronological order. Do not delete entries – mark superseded on
 
 ## ADR-009: Batch-level ShouldProcess for Invoke-WingetBulkUpgrade
 
+**Amended by ADR-012.**
+
 **Date:** 2026-08-24
 
 **Context:** `Invoke-WingetBulkUpgrade` loops `Update-WingetApp`, which already gates itself with its own `ShouldProcess`. ADR-005 established one verb-named function per winget action, no shared helper, for Install/Update/Uninstall.
@@ -144,5 +148,33 @@ Entries are in chronological order. Do not delete entries – mark superseded on
 **Reasons:** Immune to header localization; winget offers no structured output mode. Padding to the column count lets callers index a trailing column without a length check, which the variable `Available` column requires.
 
 **Known drawbacks:** Still misreads output if winget reorders columns. `^Name\s` remains the one piece of header text relied on.
+
+---
+
+## ADR-011: Update-WingetApp returns an outcome object
+
+**Date:** 2026-08-28
+
+**Context:** ADR-007 gave `Update-WingetApp` a status-string return to separate "no applicable upgrade" from a real failure. Everything else collapsed into `Failed`, so reboot-required, another-install-in-progress and package-not-found were indistinguishable — the drawback ADR-004 named in advance. Bulk upgrade made it acute: a failure inside a batch was unactionable (BUG#3).
+
+**Decision:** `Update-WingetApp` returns `[PSCustomObject]@{ Result; ExitCode }`. `Result` keeps ADR-007's four values (`Upgraded`/`UpToDate`/`Failed`/`Skipped`); `ExitCode` is the raw winget exit code, `$null` when the `ShouldProcess` gate declined. Supersedes ADR-007. `Install-WingetApp` and `Uninstall-WingetApp` keep their `[bool]` contract.
+
+**Reasons:** The exit code is the only thing distinguishing one winget failure from another, and winget offers no structured output mode. Carrying it alongside the status keeps the classification in one place instead of making every caller re-derive it.
+
+**Known drawbacks:** The three sibling functions (ADR-005) now have three different return shapes — bool, bool, object. Callers must reach through `.Result`, so a bare `switch (Update-WingetApp …)` silently stops matching rather than failing loudly.
+
+---
+
+## ADR-012: Batch approval suppresses the nested per-app gate
+
+**Date:** 2026-08-28
+
+**Context:** ADR-009 gave `Invoke-WingetBulkUpgrade` a single batch-level `ShouldProcess` gate and left `Update-WingetApp`'s own gate in place. It reasoned only about `-WhatIf` output, not about `-Confirm`: the operator was prompted once for the batch and again for every app (BUG#4).
+
+**Decision:** After the batch gate passes, `Invoke-WingetBulkUpgrade` calls `Update-WingetApp` with `-Confirm:$false`. The nested gate stays in place for `Invoke-WingetAppAction`, where it is the only gate. Amends ADR-009.
+
+**Reasons:** One approval decision should be asked once. Suppressing at the call site, rather than removing the nested gate, keeps `Update-WingetApp` safe to call directly.
+
+**Known drawbacks:** `Invoke-WingetBulkUpgrade` now decides on the operator's behalf that batch approval covers every app in it; declining an individual app mid-batch is no longer possible. The suppression lives at the call site, so a future caller that also pre-approves must remember to repeat it.
 
 ---

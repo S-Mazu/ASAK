@@ -11,7 +11,9 @@ Describe 'Update-WingetApp' {
             Mock winget { $global:LASTEXITCODE = 0 }
         }
         It 'invokes winget upgrade with the given id and returns Upgraded' {
-            Update-WingetApp -Id 'VideoLAN.VLC' | Should -Be 'Upgraded'
+            $Outcome = Update-WingetApp -Id 'VideoLAN.VLC'
+            $Outcome.Result | Should -Be 'Upgraded'
+            $Outcome.ExitCode | Should -Be 0
             Should -Invoke winget -Times 1 -ParameterFilter {
                 $args -contains 'upgrade' -and $args -contains 'VideoLAN.VLC'
             }
@@ -22,8 +24,10 @@ Describe 'Update-WingetApp' {
         BeforeAll {
             Mock winget { $global:LASTEXITCODE = -1978335189 }
         }
-        It 'returns UpToDate' {
-            Update-WingetApp -Id 'VideoLAN.VLC' | Should -Be 'UpToDate'
+        It 'returns UpToDate with the no-upgrade-available exit code' {
+            $Outcome = Update-WingetApp -Id 'VideoLAN.VLC'
+            $Outcome.Result | Should -Be 'UpToDate'
+            $Outcome.ExitCode | Should -Be -1978335189
         }
     }
 
@@ -31,8 +35,10 @@ Describe 'Update-WingetApp' {
         BeforeAll {
             Mock winget { $global:LASTEXITCODE = 1 }
         }
-        It 'returns Failed' {
-            Update-WingetApp -Id 'VideoLAN.VLC' | Should -Be 'Failed'
+        It 'returns Failed and carries the winget exit code' {
+            $Outcome = Update-WingetApp -Id 'VideoLAN.VLC'
+            $Outcome.Result | Should -Be 'Failed'
+            $Outcome.ExitCode | Should -Be 1
         }
     }
 
@@ -40,8 +46,10 @@ Describe 'Update-WingetApp' {
         BeforeAll {
             Mock winget { $global:LASTEXITCODE = 0 }
         }
-        It 'does not call winget and returns Skipped' {
-            Update-WingetApp -Id 'VideoLAN.VLC' -WhatIf | Should -Be 'Skipped'
+        It 'does not call winget and returns Skipped with no exit code' {
+            $Outcome = Update-WingetApp -Id 'VideoLAN.VLC' -WhatIf
+            $Outcome.Result | Should -Be 'Skipped'
+            $Outcome.ExitCode | Should -BeNullOrEmpty
             Should -Invoke winget -Times 0
         }
     }
@@ -52,7 +60,9 @@ Describe 'Update-WingetApp' {
             Mock Start-Process { [PSCustomObject]@{ ExitCode = 0 } }
         }
         It 'spawns cmd.exe with the winget upgrade command and returns Upgraded' {
-            Update-WingetApp -Id 'Microsoft.PowerShell' -Detached | Should -Be 'Upgraded'
+            $Outcome = Update-WingetApp -Id 'Microsoft.PowerShell' -Detached
+            $Outcome.Result | Should -Be 'Upgraded'
+            $Outcome.ExitCode | Should -Be 0
             Should -Invoke Start-Process -Times 1 -ParameterFilter {
                 $FilePath -eq 'cmd.exe' -and
                 $ArgumentList -contains 'upgrade' -and
@@ -67,7 +77,7 @@ Describe 'Update-WingetApp' {
             Mock Start-Process { [PSCustomObject]@{ ExitCode = -1978335189 } }
         }
         It 'returns UpToDate' {
-            Update-WingetApp -Id 'Microsoft.PowerShell' -Detached | Should -Be 'UpToDate'
+            (Update-WingetApp -Id 'Microsoft.PowerShell' -Detached).Result | Should -Be 'UpToDate'
         }
     }
 
@@ -75,8 +85,10 @@ Describe 'Update-WingetApp' {
         BeforeAll {
             Mock Start-Process { [PSCustomObject]@{ ExitCode = 1 } }
         }
-        It 'returns Failed' {
-            Update-WingetApp -Id 'Microsoft.PowerShell' -Detached | Should -Be 'Failed'
+        It 'returns Failed and carries the exit code from the spawned process' {
+            $Outcome = Update-WingetApp -Id 'Microsoft.PowerShell' -Detached
+            $Outcome.Result | Should -Be 'Failed'
+            $Outcome.ExitCode | Should -Be 1
         }
     }
 
@@ -86,7 +98,7 @@ Describe 'Update-WingetApp' {
             Mock Start-Process { [PSCustomObject]@{ ExitCode = 0 } }
         }
         It 'does not call winget or Start-Process and returns Skipped' {
-            Update-WingetApp -Id 'Microsoft.PowerShell' -Detached -WhatIf | Should -Be 'Skipped'
+            (Update-WingetApp -Id 'Microsoft.PowerShell' -Detached -WhatIf).Result | Should -Be 'Skipped'
             Should -Invoke winget -Times 0
             Should -Invoke Start-Process -Times 0
         }

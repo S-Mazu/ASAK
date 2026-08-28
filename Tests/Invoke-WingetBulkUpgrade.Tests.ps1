@@ -9,7 +9,7 @@ BeforeAll {
 Describe 'Invoke-WingetBulkUpgrade' {
     Context 'upgrades every app in the batch' {
         BeforeAll {
-            Mock Update-WingetApp { 'Upgraded' }
+            Mock Update-WingetApp { [PSCustomObject]@{ Result = 'Upgraded'; ExitCode = 0 } }
         }
         It 'calls Update-WingetApp once per app and reports its result' {
             $Apps = @(
@@ -25,7 +25,7 @@ Describe 'Invoke-WingetBulkUpgrade' {
 
     Context 'respects DetachedUpgrade per app' {
         BeforeAll {
-            Mock Update-WingetApp { 'Upgraded' }
+            Mock Update-WingetApp { [PSCustomObject]@{ Result = 'Upgraded'; ExitCode = 0 } }
         }
         It 'passes -Detached only for apps flagged DetachedUpgrade' {
             $Apps = @(
@@ -42,9 +42,36 @@ Describe 'Invoke-WingetBulkUpgrade' {
         }
     }
 
+    Context 'the batch approval covers every app' {
+        BeforeAll {
+            Mock Update-WingetApp { [PSCustomObject]@{ Result = 'Upgraded'; ExitCode = 0 } }
+        }
+        It 'suppresses the nested per-app confirmation' {
+            $Apps = @(
+                [PSCustomObject]@{ Name = 'VLC Player'; Id = 'VideoLAN.VLC'; DetachedUpgrade = $false }
+            )
+            Invoke-WingetBulkUpgrade -App $Apps | Out-Null
+            Should -Invoke Update-WingetApp -Times 1 -ParameterFilter { $Confirm -eq $false }
+        }
+    }
+
+    Context 'an app fails to upgrade' {
+        BeforeAll {
+            Mock Update-WingetApp { [PSCustomObject]@{ Result = 'Failed'; ExitCode = 1 } }
+        }
+        It 'carries the winget exit code into the emitted result' {
+            $Apps = @(
+                [PSCustomObject]@{ Name = 'VLC Player'; Id = 'VideoLAN.VLC'; DetachedUpgrade = $false }
+            )
+            $Result = Invoke-WingetBulkUpgrade -App $Apps
+            $Result[0].Result | Should -Be 'Failed'
+            $Result[0].ExitCode | Should -Be 1
+        }
+    }
+
     Context '-WhatIf' {
         BeforeAll {
-            Mock Update-WingetApp { 'Upgraded' }
+            Mock Update-WingetApp { [PSCustomObject]@{ Result = 'Upgraded'; ExitCode = 0 } }
         }
         It 'does not call Update-WingetApp and reports Skipped for every app' {
             $Apps = @(
@@ -52,6 +79,7 @@ Describe 'Invoke-WingetBulkUpgrade' {
             )
             $Result = Invoke-WingetBulkUpgrade -App $Apps -WhatIf
             $Result[0].Result | Should -Be 'Skipped'
+            $Result[0].ExitCode | Should -BeNullOrEmpty
             Should -Invoke Update-WingetApp -Times 0
         }
     }

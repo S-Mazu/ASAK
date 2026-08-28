@@ -361,11 +361,12 @@ function Invoke-WingetAppAction {
         $Action = Read-Host 'Choice'
         switch ($Action) {
             'U' {
-                switch (Update-WingetApp -Id $App.Id -Detached:$App.DetachedUpgrade) {
+                $Outcome = Update-WingetApp -Id $App.Id -Detached:$App.DetachedUpgrade
+                switch ($Outcome.Result) {
                     'Upgraded' { Write-Information "$($App.Name) upgraded." }
                     'UpToDate' { Write-Information "$($App.Name) is already up to date." }
                     'Skipped' { Write-Information 'Cancelled.' }
-                    default { Write-Warning "Upgrade failed for $($App.Name)." }
+                    default { Write-Warning "Upgrade failed for $($App.Name) (winget exit code $($Outcome.ExitCode))." }
                 }
             }
             'X' {
@@ -442,16 +443,43 @@ function Show-WingetBulkUpgradeMenu {
         return
     }
 
-    $Apps = foreach ($PendingApp in $Pending) {
+    $Apps = @(foreach ($PendingApp in $Pending) {
         $CuratedMatch = $Script:WingetCuratedApps | Where-Object { $_.Id -eq $PendingApp.Id } | Select-Object -First 1
         [PSCustomObject]@{
             Name            = $PendingApp.Name
             Id              = $PendingApp.Id
             DetachedUpgrade = if ($CuratedMatch) { $CuratedMatch.DetachedUpgrade } else { $false }
         }
-    }
+    })
 
-    $Result = Invoke-WingetBulkUpgrade -App $Apps
+    Write-Information ''
+    Write-Information "Upgrading $($Apps.Count) app(s) [$ScopeName]. winget runs silently; each app can take minutes."
+    for ($i = 0; $i -lt $Apps.Count; $i++) {
+        Write-Information "  $($i + 1)) $($Apps[$i].Name) ($($Apps[$i].Id))"
+    }
+    Write-Information ''
+
+    # Piped, not assigned directly: Invoke-WingetBulkUpgrade emits one object per app as
+    # it finishes, so each app reports the moment it is done instead of after the batch.
+    $Result = @(Invoke-WingetBulkUpgrade -App $Apps | ForEach-Object {
+        # switch rebinds $_ to its own input inside the case blocks, so hold the object.
+        $Outcome = $_
+        switch ($Outcome.Result) {
+            'Upgraded' { Write-Information "$($Outcome.Name) - upgraded." }
+            'UpToDate' { Write-Information "$($Outcome.Name) - already up to date." }
+            'Skipped' { Write-Information "$($Outcome.Name) - skipped." }
+            default { Write-Warning "$($Outcome.Name) - upgrade failed (winget exit code $($Outcome.ExitCode))." }
+        }
+        $Outcome
+    })
+
+    $Upgraded = @($Result | Where-Object { $_.Result -eq 'Upgraded' }).Count
+    $UpToDate = @($Result | Where-Object { $_.Result -eq 'UpToDate' }).Count
+    $Failed = @($Result | Where-Object { $_.Result -notin 'Upgraded', 'UpToDate', 'Skipped' }).Count
+
+    Write-Information ''
+    Write-Information "Done. Upgraded: $Upgraded  Already current: $UpToDate  Failed: $Failed"
+
     try {
         $Result | Format-Table -AutoSize -Wrap | Out-Host -Paging
     } catch {
