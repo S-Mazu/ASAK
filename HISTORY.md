@@ -39,3 +39,7 @@
 
 - **FF#39 — Add Notepad++ to curated apps**: added Notepad++ (`Notepad++.Notepad++`) to `Script:WingetCuratedApps`. Live-tested.
 - **FF#40 — Bulk-upgrade winget apps**: new `Get-WingetUpgrade` function enumerates pending winget upgrades, parsed by column position rather than header text since winget localizes column headers to the OS locale (observed: `Available`→`Verfügbar` on German-locale Windows — ADR-008). New `Invoke-WingetBulkUpgrade` orchestrates the upgrade loop behind a single batch-level `ShouldProcess` gate rather than per-app (ADR-009). Wired into the Winget submenu as a `B` choice offering curated-list-only or all machine-detected pending upgrades. Live-tested.
+
+## 2026-08-25
+
+- **FF#41 — Show all winget managed items**: new `Show-WingetPendingMenu`, read-only counterpart to the bulk-upgrade flow — same Curated/All scope prompt and `Get-WingetUpgrade` fetch, wired into the Winget submenu as an `S` choice, no upgrade performed. Verified via `tools/verify.ps1`; not live-tested.
