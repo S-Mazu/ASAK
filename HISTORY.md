@@ -2,6 +2,8 @@
 
 - This file is the **completed** record.
 - It is append-only.
+- **Read this file before assigning any ID.** Whoever greps for a pattern instead is a
+  stupid idiot who will number the next milestone wrong.
 ---
 
 ## 2026-08-06
@@ -55,7 +57,7 @@
 
 ## 2026-08-29
 
-- **M#1 — Quick Wins**: seven read-only information features shipped together behind a new `System Information` top-level menu (`Version Info` moved from `5` to `6`). Nine new functions, all read-only — the first ASAK work that changes no machine state, so none declares `SupportsShouldProcess`. `$AsakVersion` 0.3.0 → 0.4.0.
+- **M6 — Quick Wins**: seven read-only information features shipped together behind a new `System Information` top-level menu (`Version Info` moved from `5` to `6`). Nine new functions, all read-only — the first ASAK work that changes no machine state, so none declares `SupportsShouldProcess`. `$AsakVersion` 0.3.0 → 0.4.0.
 - **FF#12 — Show Windows license key**: `Get-WindowsProductKey` reads the firmware/OEM key from `SoftwareLicensingService.OA3xOriginalProductKey`, and edition, channel, `PartialProductKey` and license status from `SoftwareLicensingProduct` filtered to the Windows application ID. An empty firmware key is a valid result on retail installs and virtual machines, not a failure. The registry `DigitalProductId` blob is deliberately not decoded: on current Windows it yields a generic placeholder key, which is worse than an empty field.
 - **FF#13 — Get Autopilot hardware hash**: `Get-AutopilotHardwareHash` reads `DeviceHardwareData` from `MDM_DevDetail_Ext01`, the serial from `Win32_BIOS` and the product ID from the registry. It returns exactly three properties named `Device Serial Number`, `Windows Product ID` and `Hardware Hash` — the literal Intune import headers — and throws rather than carrying an error field, because a fourth column makes the exported CSV unimportable. Its export bypasses `Invoke-ExportPrompt` and forces a comma delimiter; Intune rejects the menu's default `;`. Reading the hardware data requires elevation, which ASAK already has.
 - **FF#19 — Get Intune enrollment status**: `Get-IntuneEnrollment` picks the `HKLM:\SOFTWARE\Microsoft\Enrollments` key whose `ProviderID` is `MS DM Server` with `EnrollmentState` 1, and adds the MDM device certificate's thumbprint and expiry. The other keys under that hive — Local, Cloud and Deploy Authority, and the SCCM WMI bridge — exist on unmanaged machines too, so the provider name is what identifies the enrollment.
