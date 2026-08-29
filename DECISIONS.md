@@ -178,3 +178,31 @@ Entries are in chronological order. Do not delete entries – mark superseded on
 **Known drawbacks:** `Invoke-WingetBulkUpgrade` now decides on the operator's behalf that batch approval covers every app in it; declining an individual app mid-batch is no longer possible. The suppression lives at the call site, so a future caller that also pre-approves must remember to repeat it.
 
 ---
+
+## ADR-013: Windows currency is checked against endoflife.date and a local Windows Update scan
+
+**Date:** 2026-08-29
+
+**Context:** FF#22 asks whether the installed Windows is outdated. That is two questions. The feature-update level needs a published release list, and Microsoft publishes release health as HTML only. The patch level needs the machine's own view of what it is missing. Neither source answers both: endoflife.date publishes `latest` as `10.0.26200`, with no UBR.
+
+**Decision:** `Get-WindowsVersion` reads local identity and compares the build against `https://endoflife.date/api/windows.json` (`windows-server.json` on Server), matching the cycle by `latest -eq "10.0.<CurrentBuild>"` and by edition track (`-e` for Enterprise/Education, `-w` otherwise). `Get-PendingWindowsUpdate` answers the patch level through the Windows Update Agent COM API. A failed lookup fills `CheckError` and the local half is still returned.
+
+**Reasons:** endoflife.date is the only free source publishing latest build and support dates as JSON. The two functions stay separate because they fail differently: one needs the internet, the other needs minutes and a working update agent. Recording the failure instead of throwing keeps ASAK usable offline. Product identity comes from `Win32_OperatingSystem.Caption`, never the registry `ProductName`, which reads "Windows 10 Pro" on Windows 11.
+
+**Known drawbacks:** A third-party service now sits in a code path; if it stops publishing, the comparison degrades to `CheckError` rather than breaking. The edition track is inferred from `EditionID`, so an unlisted edition reads as consumer. The scan refreshes the Windows Update metadata cache — read-only from the operator's view, not side-effect free — and `Get-PendingWindowsUpdate` deliberately carries no timeout of its own, since the caller bounds it per ADR-003.
+
+---
+
+## ADR-014: ConfigMgr presence is decided by the root\ccm namespace
+
+**Date:** 2026-08-29
+
+**Context:** FF#23 asks whether a machine is managed by Intune, ConfigMgr, or both. The Intune half reads `HKLM:\SOFTWARE\Microsoft\Enrollments`, and the same hive appears to answer the ConfigMgr half: a key on the test machine carries `ProviderID = WMI_Bridge_SCCM_Server`. That machine has no ConfigMgr client, and `root\ccm` is absent.
+
+**Decision:** `Get-ConfigMgrClient` decides installed/not by whether `root\ccm`'s `SMS_Client` class responds. The Enrollments registry serves only the Intune side, keyed on `ProviderID -eq 'MS DM Server'` with `EnrollmentState -eq 1`. `Get-DeviceManagement` composes both and derives `CoManaged` / `Intune` / `ConfigMgr` / `None`.
+
+**Reasons:** The namespace is created by the client installer and removed with it, so its presence is the fact being asked about. The WMI bridge entry is a provider registration that ships with Windows, not evidence of management — keying off it reports every machine as ConfigMgr-managed.
+
+**Known drawbacks:** A ConfigMgr client broken enough that WMI does not answer reads as unmanaged. Domain and Entra join state are deliberately excluded (FF#24 covers those), so `ManagementMode` describes management only.
+
+---

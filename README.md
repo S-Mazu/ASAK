@@ -5,6 +5,7 @@ PowerShell 7 tooling for machine management and information gathering on Windows
 
 - **PowerShell 7.6 LTS or later** must be installed on the target machine.
 - **Administrator privileges** are required to run ASAK.
+- **Internet access** is optional; only the Windows version check uses it.
 
 ## Install
 

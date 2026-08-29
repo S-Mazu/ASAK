@@ -2,8 +2,11 @@
 #requires -RunAsAdministrator
 
 $InformationPreference = 'Continue'
-$AsakVersion = '0.3.0'
+$AsakVersion = '0.4.0'
 $FeatureQueryTimeoutSeconds = 30
+# A Windows Update scan legitimately runs for minutes on a machine that is behind, so it gets
+# a far longer deadline than the feature query.
+$WindowsUpdateScanTimeoutSeconds = 300
 
 Get-ChildItem -Path (Join-Path $PSScriptRoot 'Functions') -Filter '*.ps1' | ForEach-Object {
     . $_.FullName
@@ -558,6 +561,158 @@ function Show-SoftwareInstallMenu {
     } while ($SubChoice -ne '0')
 }
 
+function Show-SystemInformationResult {
+    param(
+        [PSObject[]]$Result,
+
+        [switch]$AsList,
+
+        [string]$ExportFileName
+    )
+
+    if (-not $Result) {
+        Write-Information 'Nothing to show.'
+        return
+    }
+
+    # One-object answers read as a list; multi-row ones as a table.
+    $Formatted = if ($AsList) { $Result | Format-List } else { $Result | Format-Table -AutoSize -Wrap }
+    try {
+        $Formatted | Out-Host -Paging
+    } catch {
+        if ($_.CategoryInfo.Category -ne 'OperationStopped') {
+            throw
+        }
+    }
+
+    if (-not $ExportFileName) {
+        return
+    }
+    $ExportChoice = Read-Host 'Export to CSV? (y/N)'
+    if ($ExportChoice -match '^[Yy]') {
+        Invoke-ExportPrompt -Result $Result -DefaultFileName $ExportFileName
+    }
+}
+
+function Show-WindowsVersionMenu {
+    $Version = Get-WindowsVersion
+    Show-SystemInformationResult -Result $Version -AsList
+
+    if ($Version.CheckError) {
+        Write-Warning "Could not compare against the published release list - $($Version.CheckError)"
+    } elseif ($Version.IsCurrentFeatureUpdate -eq $false) {
+        Write-Warning "A newer feature update is available: $($Version.LatestLabel), build $($Version.LatestBuild)."
+    }
+    if ($Version.IsOutOfSupport) {
+        Write-Warning "This release reached end of life on $($Version.EndOfLife)."
+    }
+
+    Write-Information ''
+    Write-Information 'The published release list resolves to feature-update level only - it cannot see whether this month''s cumulative update is installed.'
+    Write-Information 'Scanning Windows Update answers that, and can take several minutes.'
+    $ScanChoice = Read-Host 'Scan Windows Update now? (y/N)'
+    if ($ScanChoice -notmatch '^[Yy]') {
+        return
+    }
+
+    # Same background-job-with-deadline treatment as the feature query (ADR-003): the scan
+    # has no other cancellation point, and a broken update agent hangs indefinitely.
+    $FunctionPath = Join-Path $PSScriptRoot 'Functions' 'Get-PendingWindowsUpdate.ps1'
+    $Job = Start-Job -ScriptBlock {
+        . $using:FunctionPath
+        Get-PendingWindowsUpdate
+    }
+
+    Write-Information 'Scanning...'
+    if (-not (Wait-Job -Job $Job -Timeout $Script:WindowsUpdateScanTimeoutSeconds)) {
+        Stop-Job -Job $Job
+        Remove-Job -Job $Job -Force
+        Write-Warning "The Windows Update scan did not finish within $Script:WindowsUpdateScanTimeoutSeconds seconds and was aborted."
+        return
+    }
+
+    try {
+        $Pending = @(Receive-Job -Job $Job -ErrorAction Stop)
+    } catch {
+        Write-Warning "The Windows Update scan failed - $($_.Exception.Message)"
+        return
+    } finally {
+        Remove-Job -Job $Job -Force
+    }
+
+    Write-Information ''
+    Write-Information "Windows Update reports $($Pending.Count) pending update(s)."
+    if ($Pending.Count -gt 0) {
+        Show-SystemInformationResult -Result $Pending -ExportFileName 'Get-PendingWindowsUpdate.csv'
+    }
+}
+
+function Show-WindowsProductKeyMenu {
+    Show-SystemInformationResult -Result (Get-WindowsProductKey) -AsList
+}
+
+function Show-DeviceManagementMenu {
+    Show-SystemInformationResult -Result (Get-DeviceManagement) -AsList
+}
+
+function Show-AutopilotHardwareHashMenu {
+    try {
+        $HardwareHash = Get-AutopilotHardwareHash
+    } catch {
+        Write-Warning $_.Exception.Message
+        return
+    }
+
+    Show-SystemInformationResult -Result $HardwareHash -AsList
+
+    # Intune's Autopilot import rejects a semicolon-delimited file, so this export skips
+    # Invoke-ExportPrompt's format questions and fixes the format instead.
+    $ExportChoice = Read-Host 'Export to CSV for Autopilot import? (y/N)'
+    if ($ExportChoice -notmatch '^[Yy]') {
+        return
+    }
+    $Path = Read-Host 'Export path (default .\AutopilotHWID.csv)'
+    if (-not $Path) {
+        $Path = '.\AutopilotHWID.csv'
+    }
+    $HardwareHash | Export-InventoryCsv -Path $Path -NoTypeInformation -Encoding UTF8 -Delimiter ','
+    Write-Information "Exported to $Path"
+}
+
+function Show-LocalAdministratorMenu {
+    Show-SystemInformationResult -Result (Get-LocalAdministrator) -ExportFileName 'Get-LocalAdministrator.csv'
+}
+
+function Show-NetworkConfigurationMenu {
+    Show-SystemInformationResult -Result (Get-NetworkConfiguration) -ExportFileName 'Get-NetworkConfiguration.csv'
+}
+
+function Show-SystemInformationMenu {
+    do {
+        Write-Information ''
+        Write-Information '----- System Information -----'
+        Write-Information '1) Windows version and update status'
+        Write-Information '2) Windows product key'
+        Write-Information '3) Device management status'
+        Write-Information '4) Autopilot hardware hash'
+        Write-Information '5) Local administrators'
+        Write-Information '6) Network configuration'
+        Write-Information '0) Back'
+        $SubChoice = Read-Host 'Choice'
+
+        switch ($SubChoice) {
+            '1' { Show-WindowsVersionMenu }
+            '2' { Show-WindowsProductKeyMenu }
+            '3' { Show-DeviceManagementMenu }
+            '4' { Show-AutopilotHardwareHashMenu }
+            '5' { Show-LocalAdministratorMenu }
+            '6' { Show-NetworkConfigurationMenu }
+            '0' { }
+            default { Write-Warning 'Invalid choice.' }
+        }
+    } while ($SubChoice -ne '0')
+}
+
 function Show-VersionInfoMenu {
     Write-Information ''
     Write-Information "ASAK version $AsakVersion"
@@ -567,6 +722,7 @@ function Show-VersionInfoMenu {
     Write-Information '  Installed Apps     - inventory installed apps, view onscreen or export to CSV.'
     Write-Information '  Windows Features   - inventory installed Windows features, view onscreen or export to CSV.'
     Write-Information '  Software Install   - check/install/upgrade/uninstall common apps via winget; show or bulk-upgrade pending updates.'
+    Write-Information '  System Information - Windows version and update status, product key, device management, Autopilot hash, local admins, network config.'
     Write-Information '  Version Info       - this screen.'
     Write-Information ''
     Write-Information 'Release notes: see HISTORY.md.'
@@ -582,7 +738,8 @@ do {
     Write-Information '2) Installed Apps'
     Write-Information '3) Windows Features'
     Write-Information '4) Software Install'
-    Write-Information '5) Version Info'
+    Write-Information '5) System Information'
+    Write-Information '6) Version Info'
     Write-Information '0) Exit'
     $MenuChoice = Read-Host 'Choice'
 
@@ -591,7 +748,8 @@ do {
         '2' { Clear-Host; Show-AppManagementMenu; Clear-Host }
         '3' { Clear-Host; Show-FeatureManagementMenu; Clear-Host }
         '4' { Clear-Host; Show-SoftwareInstallMenu; Clear-Host }
-        '5' { Clear-Host; Show-VersionInfoMenu; Clear-Host }
+        '5' { Clear-Host; Show-SystemInformationMenu; Clear-Host }
+        '6' { Clear-Host; Show-VersionInfoMenu; Clear-Host }
         '0' { }
         default { Write-Warning 'Invalid choice.' }
     }

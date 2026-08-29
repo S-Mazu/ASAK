@@ -28,6 +28,7 @@ PowerShell 7 tooling for machine management and information gathering on Windows
 
 | # | Bug | Description | Priority |
 |---|-----|-------------|----------|
+| BUG#5 | `Get-WingetUpgrade` drops Store-sourced packages | The Id-column heuristic that excludes winget's trailing summary line requires a dot in the Id, which msstore product IDs do not have. Confirmed live: 17 rows read, 14 kept; `Docker Desktop` (`XP8CBJ40XLBWKX`) and `KeePassXC` (`XP8K2L36VP0QMB`) dropped. Docker Desktop is curated, so the Curated scope misses its pending upgrade too. | Medium |
 
 ---
 
@@ -43,18 +44,12 @@ PowerShell 7 tooling for machine management and information gathering on Windows
 | # | Feature | Description | Priority | Effort |
 |---|---------|-------------|----------|--------|
 | FF#7 | Outdated version check | Compare each inventoried app's installed version against its latest available version, flag outdated ones. | Medium | M |
-| FF#12 | Show Windows license key | Retrieve and display the Windows product/license key. | Low | S |
-| FF#13 | Get Autopilot hardware hash | Retrieve the hardware hash/ID needed for Windows Autopilot device registration. | Medium | S |
 | FF#14 | Comparable inventory output | Add comparison capability to inventory results where sensible (e.g. diff two exports, or cross-check sources against each other). | Medium | M |
 | FF#15 | Uninstall packages | Add uninstall capability for installed apps/packages. State-changing — needs `ShouldProcess` per the Execution Boundary. | Medium | M |
 | FF#16 | Install via winget | Install applications via winget from the menu. State-changing — needs `ShouldProcess`. | Medium | M |
 | FF#17 | Install common PowerShell modules | Menu shortcut to install frequently-used modules (e.g. ExchangeOnlineManagement, PnP.PowerShell, Microsoft.Graph/Entra). State-changing — needs `ShouldProcess`. | Medium | M |
 | FF#18 | Recent System/Security event log errors | Show the last 10 Error/Critical entries from the System and Security event logs. | Medium | S |
-| FF#19 | Get Intune enrollment status | Show the device's Intune management/enrollment status. | Medium | S |
-| FF#20 | Local admin group members | List local users who are members of the local Administrators group. | Medium | S |
 | FF#21 | Detect duplicate app installs | Flag apps with multiple installed versions present at once (e.g. two versions of the same app) in the inventory output. | Medium | S |
-| FF#22 | Windows version check | Compare the installed Windows version/build against the most recent available version, flag if outdated. | Medium | S |
-| FF#23 | SCCM vs Intune management status | Show which management is configured (SCCM, Intune, or co-management). | Medium | S |
 | FF#24 | AD join status | Show Active Directory domain join status (domain-joined, Azure AD/Entra joined, or workgroup). | Medium | S |
 | FF#25 | TPM status and version | Show TPM presence, status, and version. | Medium | S |
 | FF#26 | Clear Teams cache | Clear Microsoft Teams cache. State-changing — needs `ShouldProcess`. | Low | S |
@@ -64,7 +59,6 @@ PowerShell 7 tooling for machine management and information gathering on Windows
 | FF#30 | Reset Edge | Reset Microsoft Edge to its default state. State-changing — needs `ShouldProcess`. | Low | M |
 | FF#31 | DISM and SFC troubleshooting | Run DISM `/RestoreHealth` and SFC `/scannow` for system file repair. State-changing — needs `ShouldProcess`. | Medium | M |
 | FF#32 | Join domain | Join the computer to an Active Directory domain. State-changing — needs `ShouldProcess`. | Medium | M |
-| FF#33 | Network stats | Show IP configuration, gateway, and DNS servers. | Medium | S |
 
 ---
 
